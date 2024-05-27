@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aero Optimiser</title>
+    <link rel="stylesheet" href="stylesheet.css">
+    <script src="script.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Flight Optimisation via Genetic Algorithms</h1>
+    <form>
+        <label for="options">Optimisation:</label><br>
+        <input type="radio" id="option1" name="options" value="1" checked>
+        <label for="option1">Cruise Conditions</label><br>
+        <input type="radio" id="option2" name="options" value="2">
+        <label for="option2">Optimal Climb</label><br>
+        <input type="radio" id="option3" name="options" value="3">
+        <label for="option3">Max Climb</label><br><br>
+
+        <label for="velocity">Velocity:</label>
+        <input type="number" id="velocity" name="velocity" value="60"><br><br>
+        
+        <div id="button-container">
+            <button type="submit" id="solve-button">Solve</button>
+        </div>
+        
+    </form>
+    <div id="image-container">
+        <img src="outputs/Default.png" alt="Default Image">
+    </div> 
+    <div id="chart-container" style="width: 60%; margin: auto;">
+        <canvas id="fitnessChart"></canvas>
+    </div>     
+</body>
+</html>

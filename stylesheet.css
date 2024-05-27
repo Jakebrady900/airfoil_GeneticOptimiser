@@ -1,0 +1,95 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f0f5f9; /* Pale blue background */
+    color: #444; /* Dark grey text */
+}
+
+h1 {
+    text-align: center;
+    color: #337ab7; /* Light blue heading */
+}
+
+form {
+    max-width: 400px;
+    margin: 0 auto;
+    background-color: #ffffff; /* White form background */
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Soft shadow */
+}
+
+label {
+    display: inline-block;
+    width: 150px;
+    color: #555; /* Dark grey label text */
+}
+
+/* Style the labels for Velocity and Optimisation Options */
+label[for="velocity"],
+label[for="options"] {
+    margin-bottom: 10px; /* Add margin-bottom to create space */
+    font-weight: bold; /* Make the text bold */
+    font-size: larger;
+}
+
+/* Style the label of the selected radio option */
+input[type="radio"]:checked + label {
+    background-color: #cceeff; /* Light blue background */
+    border-radius: 4px; /* Rounded corners */
+    padding: 4px; /* Add some padding for spacing */
+}
+
+input[type="radio"],
+input[type="number"] {
+    margin-bottom: 10px;
+    border: 1px solid #ccc; /* Light grey border */
+    border-radius: 4px;
+    padding: 8px;
+}
+
+#velocity {
+    font-size: large;
+}
+
+#image-container {
+    margin-top: 20px;
+    text-align: center;
+}
+
+img {
+    width: 60%;
+    max-width: none;
+    border-radius: 8px; /* Add border radius to image */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Soft shadow */
+}
+
+#button-container {
+    text-align: right;
+}
+
+/* Primary button style */
+#solve-button {
+    background-color: #337ab7; /* Blue background color */
+    color: #fff; /* White text color */
+    border: none; /* Remove border */
+    border-radius: 5px; /* Rounded corners */
+    padding: 10px 20px; /* Padding */
+    cursor: pointer; /* Cursor style */
+    font-size: 22px; /* Font size */
+}
+
+/* Hover effect */
+#solve-button:hover {
+    background-color: #ddd; /* Mid-light grey background color on hover */
+    color: #337ab7; /* Blue text color on hover */
+}
+
+#chart-container {
+    transition: all 0.5s ease; /* Smooth transition */
+}
+
+#chart-container.half-size {
+    transform: scale(0.5); /* Reduce size by half */
+    transform-origin: top left; /* Keep top left corner in place */
+}
