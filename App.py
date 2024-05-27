@@ -39,7 +39,7 @@ async def getStatus():
 
 
 def run_GA_in_background(solution_type, velocity):
-    GA.run_GA(num_generations=10, num_solutions_per_gen=20, Velocity=velocity, solution_type=solution_type)
+    GA.run_GA(num_generations=15, num_solutions_per_gen=20, Velocity=velocity, solution_type=solution_type)
 
 if __name__ == "__main__":
     # Specify the port here
