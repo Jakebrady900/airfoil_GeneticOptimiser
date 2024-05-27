@@ -55,11 +55,11 @@ class Solution:
         
 
 def create_solution():
-    AOA = random.uniform(-5, 14)
-    d2Yl = random.uniform(-0.3, 0.3)
-    y_TE = random.uniform(-0.1, 0.1)
-    a_TE = random.uniform(-15, 5)
-    s = Solution(Velocity=V, AOA=AOA, d2Yl=d2Yl, y_TE=y_TE, a_TE=a_TE)
+    s = Solution(Velocity=V, 
+                 AOA=random.uniform(-3, 9), 
+                 d2Yl=random.uniform(-0.4, 0.4), 
+                 y_TE=random.uniform(-0.15, 0.1), 
+                 a_TE=random.uniform(-18.5, 7.5))
     s.scale_self()
     return s
 
