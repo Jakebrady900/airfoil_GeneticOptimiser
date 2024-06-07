@@ -1,5 +1,3 @@
-__pycache__/GeneticAlgorithm.cpython-311.pyc
-outputs/airfoil.csv
-outputs/airfoil.png
+__pycache__/*
+outputs/*
 .idea
-__pycache__

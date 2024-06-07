@@ -6,6 +6,7 @@ import (
 	"airfoil_API/Parsec"
 	"encoding/csv"
 	"fmt"
+	"image/color"
 	"log"
 	"net/http"
 	"os"
@@ -46,6 +47,7 @@ func APIplotAirfoil(c *gin.Context) {
 }
 
 func main() {
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 	router.POST("/plotAirfoil", APIplotAirfoil)
 	router.Run(":8080")
@@ -75,9 +77,13 @@ func plotAirfoil(X, YUpper, YLower []float64, isValid bool, AOA float64, saveNam
 
 	p := plot.New()
 
-	p.Title.Text = "Y_Upper and Y_Lower Curves"
-	p.X.Label.Text = "X"
-	p.Y.Label.Text = "Y"
+	p.Title.Text = ""
+	p.Legend.TextStyle.Color = color.White
+	p.Legend.Left = false
+	p.Legend.XOffs = 99
+	p.HideAxes()
+	p.X.Label.Text = ""
+	p.Y.Label.Text = ""
 
 	err := plotutil.AddLinePoints(p,
 		"Y_Upper", ptsUpper,

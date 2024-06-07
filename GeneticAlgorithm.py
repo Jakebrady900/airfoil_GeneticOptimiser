@@ -84,6 +84,7 @@ def mutate(s, mutation_chance=0.01):
 def run_GA(num_generations, num_solutions_per_gen, Velocity, solution_type=1):
     global V
     V = Velocity
+    global best_solution
     global FitnessTracker
     FitnessTracker = [()]
     global Status

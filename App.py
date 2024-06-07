@@ -17,7 +17,7 @@ App.add_middleware(
 )
 
 # Mount a directory to serve static files (images)
-App.mount("/outputs", StaticFiles(directory="outputs"), name="outputs")  # Replace "outputs" with your actual directory name
+App.mount("/outputs", StaticFiles(directory="outputs"), name="outputs") 
 
 
 @App.post("/run")
@@ -35,7 +35,7 @@ async def HandleRequest(payload: dict):
 async def getStatus():
     if not GA.Status:
         return {"fitness_tracker": GA.FitnessTracker}
-    return {"status": "Complete."}
+    return {"status": "Complete.", "Airfoil": GA.best_solution}
 
 
 def run_GA_in_background(solution_type, velocity):

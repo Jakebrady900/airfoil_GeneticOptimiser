@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 if (jsonResponse.status && jsonResponse.status === "Complete.") {
                     console.log("Process completed successfully!");
-                    await fetchAndUpdateImage();
+                    await fetchAndUpdateImage(jsonResponse.Airfoil.AOA);
                     break;
                 } else if (jsonResponse.fitness_tracker) {
                     console.log("Updating chart with new data...");
@@ -93,7 +93,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    async function fetchAndUpdateImage() {
+    async function fetchAndUpdateImage(rotationDegrees) {
         try {
             const response = await fetch('http://localhost:8081/outputs/airfoil.png'); 
             if (!response.ok) {
@@ -103,7 +103,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const imageURL = URL.createObjectURL(blob);
 
             document.getElementById('image-container').innerHTML = `
-                <img src="${imageURL}" alt="Updated Image">
+            <img src="${imageURL}" alt="Updated Image" style="transform: rotate(${rotationDegrees}deg);">
             `;
         } catch (error) {
             console.error('Error fetching image:', error);

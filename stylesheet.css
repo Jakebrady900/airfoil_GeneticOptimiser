@@ -1,3 +1,12 @@
+html, body {
+    /* height: 100%; */
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
 body {
     font-family: Arial, sans-serif;
     margin: 20px;
@@ -35,15 +44,15 @@ label[for="options"] {
 
 /* Style the label of the selected radio option */
 input[type="radio"]:checked + label {
-    background-color: #cceeff; /* Light blue background */
-    border-radius: 4px; /* Rounded corners */
-    padding: 4px; /* Add some padding for spacing */
+    background-color: #cceeff;
+    border-radius: 4px;
+    padding: 4px; 
 }
 
 input[type="radio"],
 input[type="number"] {
     margin-bottom: 10px;
-    border: 1px solid #ccc; /* Light grey border */
+    border: 1px solid #ccc;
     border-radius: 4px;
     padding: 8px;
 }
@@ -53,15 +62,21 @@ input[type="number"] {
 }
 
 #image-container {
+    height: 220px;
+    width: 800px;
     margin-top: 20px;
-    text-align: center;
+    background-color: rgb(255, 255, 255);
+    border-radius: 8px; 
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center; 
+    justify-content: center;
 }
 
 img {
-    width: 60%;
+    border-radius: 8px;
+    width: 98%;
     max-width: none;
-    border-radius: 8px; /* Add border radius to image */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Soft shadow */
 }
 
 #button-container {
