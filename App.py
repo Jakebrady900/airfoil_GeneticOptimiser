@@ -39,7 +39,15 @@ async def getStatus():
 
 
 def run_GA_in_background(solution_type, velocity):
-    GA.run_GA(num_generations=15, num_solutions_per_gen=20, Velocity=velocity, solution_type=solution_type)
+    if solution_type == 1: num_generations,num_solutions_per_gen = 15, 200
+    elif solution_type == 2: num_generations,num_solutions_per_gen = 15, 20
+    elif solution_type == 3: num_generations,num_solutions_per_gen = 15, 20
+    else: raise HTTPException(status_code=400, detail="Invalid solution type")
+
+    GA.run_GA(num_generations=num_generations, 
+              num_solutions_per_gen=num_solutions_per_gen, 
+              Velocity=velocity, 
+              solution_type=solution_type)
 
 if __name__ == "__main__":
     # Specify the port here

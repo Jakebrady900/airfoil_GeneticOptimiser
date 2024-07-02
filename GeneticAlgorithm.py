@@ -11,7 +11,7 @@ CD_Predictor = joblib.load("CD_model.pkl")
 preprocess_pipeline = joblib.load('pipeline.pkl')
 
 
-class Solution:
+class Airfoil:
     def __init__(self, Velocity, AOA, d2Yl, y_TE, a_TE):
         self.Velocity = Velocity
         self.AOA = AOA
@@ -55,7 +55,7 @@ class Solution:
         
 
 def create_solution():
-    s = Solution(Velocity=V, 
+    s = Airfoil(Velocity=V, 
                  AOA=random.uniform(-3, 9), 
                  d2Yl=random.uniform(-0.4, 0.4), 
                  y_TE=random.uniform(-0.15, 0.1), 
@@ -72,13 +72,13 @@ def crossover(p1, p2):
     dna2 = [p2.AOA, p2.d2Yl, p2.y_TE, p2.a_TE]
     
     child = [dna1[n] if random.randint(0, 1) == 0 else dna2[n] for n in range(len(dna1))]
-    return Solution(Velocity=p1.Velocity, AOA=child[0], d2Yl=child[1], y_TE=child[2], a_TE=child[3])
+    return Airfoil(Velocity=p1.Velocity, AOA=child[0], d2Yl=child[1], y_TE=child[2], a_TE=child[3])
 
 def mutate(s, mutation_chance=0.01):
     dna = [s.AOA, s.d2Yl, s.y_TE, s.a_TE]
 
     mutated_dna = [(random.uniform(-0.5, 0.5) + 1) * gene if random.random() <= mutation_chance else gene for gene in dna]
-    return Solution(Velocity=s.Velocity, AOA=dna[0], d2Yl=dna[1], y_TE=dna[2], a_TE=dna[3])
+    return Airfoil(Velocity=s.Velocity, AOA=dna[0], d2Yl=dna[1], y_TE=dna[2], a_TE=dna[3])
 
 
 def run_GA(num_generations, num_solutions_per_gen, Velocity, solution_type=1):
@@ -90,7 +90,7 @@ def run_GA(num_generations, num_solutions_per_gen, Velocity, solution_type=1):
     global Status
     Status = False
     global Cruise_CL
-    Cruise_CL = (2*1633)/((V**2)* 0.95697 * 16.16 * 1.25)
+    Cruise_CL = (2*1633)/((V**2)* 0.95697 * 16.16 * 1.25) # Semantic value within the context of the problem.
 
     population = init_population(num_solutions_per_gen)
     pop_size = num_solutions_per_gen
@@ -98,18 +98,60 @@ def run_GA(num_generations, num_solutions_per_gen, Velocity, solution_type=1):
     for i in range(num_generations):
         scored_population = [(s.get_fitness(solution_type), s) for s in population]
         scored_population.sort(key=sortByScore, reverse=True)
-        best_solution = scored_population[0][1]
 
         print("\n\n=== Gen {} best solutions === ".format(i))
         print("Fitness: {}".format(scored_population[0][0]))
-        printSolution(best_solution)
+        printSolution(scored_population[0][1])
 
+        # Append the Fitness Tracker
+        avg_fitness = sum(score for score, _ in scored_population) / num_solutions_per_gen
+        avg_fitness = scored_population[0][0]
+        FitnessTracker.append((i+1, avg_fitness))
+        
+        if scored_population[0][0] == 1:
+            population = init_population(num_solutions_per_gen)
+            print("Regenerating population due to no sufficient solutions")
+            continue
+        
+        # Reassign the population to the newly generated population
+        population = select_pool(scored_population=scored_population, solution_type=solution_type)
+
+
+    best_solution = scored_population[0][1]
+    best_solution = denormalize_data(best_solution)
+    print("\n\n=== Best solution overall === ")
+    printSolution(best_solution)
+    plot_airfoil(best_solution)
+    Status = True
+
+def select_pool(scored_population, solution_type):
         # ================ Pool Selection ================
         # 1. retain the top 25% of the previous population
         # 2. crossover (returning two offspring) for 50%
         # 3. completely random new solutions for 25%
         # ====================   End   ====================
-        
+
+        pop_size = len(scored_population)
+
+        if solution_type == 1 and scored_population[0][0] != 1:
+            # Find how many solutions are not equal to 1
+            count = 0
+            for i in range(pop_size):
+                if scored_population[i][0] > 1:
+                    count += 1
+                else:
+                    exit
+            if count < pop_size//2:
+                # add the solutions that are not equal to 1 to an array on repeat until the population is full
+                new_pop = [scored_population[i][1] for i in range(count)]
+
+                # new code to fill the rest of new_pop
+                while len(new_pop) < pop_size:
+                    new_pop.extend(scored_population[i][1] for i in range(count))
+
+                # if new_pop is larger than pop_size, trim it down
+                if len(new_pop) > pop_size:
+                    new_pop = new_pop[:pop_size]
 
         # 1.retain the top 25% of the previous population
         top_parents  = [s for _, s in scored_population[:pop_size//4]]
@@ -124,21 +166,8 @@ def run_GA(num_generations, num_solutions_per_gen, Velocity, solution_type=1):
         # Mutation
         new_pop = top_parents + offspring + new_solutions
         new_pop = [mutate(new_pop[i]) for i in range(pop_size)]
-        
-        # Reassign the population to the newly generated population
-        population = new_pop
 
-        # Append the Fitness Tracker
-        avg_fitness = sum(score for score, _ in scored_population) / num_solutions_per_gen
-        avg_fitness = scored_population[0][0]
-        FitnessTracker.append((i+1, avg_fitness))
-
-    best_solution = scored_population[0][1]
-    best_solution = denormalize_data(best_solution)
-    print("\n\n=== Best solution overall === ")
-    printSolution(best_solution)
-    plot_airfoil(best_solution)
-    Status = True
+        return new_pop
 
 
 def sortByScore(tup):
@@ -164,7 +193,7 @@ def denormalize_data(s):
         std_scaler.fit(df[[col]])
         data_df[col] = std_scaler.inverse_transform(data_df[[col]])
 
-    return Solution(Velocity=data_df["Velocity"][0], AOA=data_df["AOA"][0], 
+    return Airfoil(Velocity=data_df["Velocity"][0], AOA=data_df["AOA"][0], 
                d2Yl=data_df["d2Yl"][0], y_TE=data_df["y_TE"][0], a_TE=data_df["a_TE"][0])
 
 

@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 console.error("Error:", error);
                 break;
             }
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second before the next request
+            await new Promise(resolve => setTimeout(resolve, 3000)); // Wait for 3 seconds before the next request
         }
     }
 
