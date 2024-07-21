@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 data: {
                     labels: [],
                     datasets: [{
-                        label: 'Average Fitness',
+                        label: 'Fitness',
                         data: [],
                         borderColor: 'rgba(75, 192, 192, 1)',
                         borderWidth: 1,

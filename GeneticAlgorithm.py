@@ -4,6 +4,7 @@ import requests
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import random
 import warnings
+import time
 warnings.filterwarnings("ignore")    
 
 CL_Predictor = joblib.load("CL_model.pkl")
@@ -41,7 +42,7 @@ class Airfoil:
         match solution_type:
             case 1:
                 # 1. Cruise Condition (CL set, minimise Drag)
-                if CL < Cruise_CL * 0.98 or CL > Cruise_CL * 1.02:
+                if CL < Cruise_CL * 0.95 or CL > Cruise_CL * 1.05:
                     return 1
                 return (CL / CD)
             case 2:
@@ -63,7 +64,18 @@ def create_solution():
     s.scale_self()
     return s
 
-def init_population(population_size):
+def create_cruise_solution():
+    s = Airfoil(Velocity=V, 
+                 AOA=random.uniform(-2, 3), 
+                 d2Yl=random.uniform(-0.2, 0.2), 
+                 y_TE=random.uniform(-0.1, 0.1), 
+                 a_TE=random.uniform(-10, 5))
+    s.scale_self()
+    return s
+
+def init_population(population_size, isCruise=False):
+    if isCruise:
+        return [create_cruise_solution() for _ in range(population_size)]
     return [create_solution() for _ in range(population_size)]
 
 
@@ -82,6 +94,7 @@ def mutate(s, mutation_chance=0.01):
 
 
 def run_GA(num_generations, num_solutions_per_gen, Velocity, solution_type=1):
+    start_time = time.time()
     global V
     V = Velocity
     global best_solution
@@ -92,25 +105,21 @@ def run_GA(num_generations, num_solutions_per_gen, Velocity, solution_type=1):
     global Cruise_CL
     Cruise_CL = (2*1633)/((V**2)* 0.95697 * 16.16 * 1.25) # Semantic value within the context of the problem.
 
-    population = init_population(num_solutions_per_gen)
+    population = init_population(population_size=num_solutions_per_gen, isCruise=(solution_type==1))
     pop_size = num_solutions_per_gen
 
     for i in range(num_generations):
         scored_population = [(s.get_fitness(solution_type), s) for s in population]
         scored_population.sort(key=sortByScore, reverse=True)
 
-        print("\n\n=== Gen {} best solutions === ".format(i))
-        print("Fitness: {}".format(scored_population[0][0]))
-        printSolution(scored_population[0][1])
-
+        print("\n\n=== Gen {} === ".format(i))
         # Append the Fitness Tracker
         avg_fitness = sum(score for score, _ in scored_population) / num_solutions_per_gen
         avg_fitness = scored_population[0][0]
         FitnessTracker.append((i+1, avg_fitness))
         
         if scored_population[0][0] == 1:
-            population = init_population(num_solutions_per_gen)
-            print("Regenerating population due to no sufficient solutions")
+            population = getCruiseAirfoil(num_solutions_per_gen)
             continue
         
         # Reassign the population to the newly generated population
@@ -120,55 +129,76 @@ def run_GA(num_generations, num_solutions_per_gen, Velocity, solution_type=1):
     best_solution = scored_population[0][1]
     best_solution = denormalize_data(best_solution)
     print("\n\n=== Best solution overall === ")
+    print("Fitness: ", scored_population[0][0])
     printSolution(best_solution)
+
+    end_time = time.time()  # Stop the timer
+    execution_time = end_time - start_time  # Calculate the execution time
+    print(f"\nExecution time: {execution_time:.2f} seconds")
+
     plot_airfoil(best_solution)
     Status = True
 
 def select_pool(scored_population, solution_type):
-        # ================ Pool Selection ================
-        # 1. retain the top 25% of the previous population
-        # 2. crossover (returning two offspring) for 50%
-        # 3. completely random new solutions for 25%
-        # ====================   End   ====================
+    # ================ Pool Selection ================
+    # 1. retain the top 25% of the previous population
+    # 2. crossover (returning two offspring) for 50%
+    # 3. completely random new solutions for 25%
+    # ====================   End   ====================
 
-        pop_size = len(scored_population)
+    pop_size = len(scored_population)
 
-        if solution_type == 1 and scored_population[0][0] != 1:
-            # Find how many solutions are not equal to 1
-            count = 0
-            for i in range(pop_size):
-                if scored_population[i][0] > 1:
-                    count += 1
-                else:
-                    exit
-            if count < pop_size//2:
-                # add the solutions that are not equal to 1 to an array on repeat until the population is full
-                new_pop = [scored_population[i][1] for i in range(count)]
+    if solution_type == 1 and scored_population[0][0] != 1:
+        # Find how many solutions are not equal to 1
+        count = 0
+        for i in range(pop_size):
+            if scored_population[i][0] > 1:
+                count += 1
+            else:
+                exit
+        if count < pop_size//2:
+            # add the solutions that are not equal to 1 to an array on repeat until the population is full
+            new_pop = [scored_population[i][1] for i in range(count)]
 
-                # new code to fill the rest of new_pop
-                while len(new_pop) < pop_size:
-                    new_pop.extend(scored_population[i][1] for i in range(count))
+            # new code to fill the rest of new_pop
+            while len(new_pop) < pop_size:
+                new_pop.extend(scored_population[i][1] for i in range(count))
 
-                # if new_pop is larger than pop_size, trim it down
-                if len(new_pop) > pop_size:
-                    new_pop = new_pop[:pop_size]
+            # if new_pop is larger than pop_size, trim it down
+            if len(new_pop) > pop_size:
+                new_pop = new_pop[:pop_size]
 
-        # 1.retain the top 25% of the previous population
-        top_parents  = [s for _, s in scored_population[:pop_size//4]]
-        
-        # 2. crossover (returning two offspring) for 50%
-        offspring = [crossover(random.choice(top_parents), random.choice(top_parents)) for _ in range(pop_size//2)]
+    # 1.retain the top 25% of the previous population
+    top_parents  = [s for _, s in scored_population[:pop_size//4]]
+    
+    # 2. crossover (returning two offspring) for 50%
+    offspring = [crossover(random.choice(top_parents), random.choice(top_parents)) for _ in range(pop_size//2)]
 
-        # 3. completely random new solutions for 25%
-        new_solutions = [create_solution() for _ in range(pop_size - len(top_parents) - len(offspring))]
+    # 3. completely random new solutions for 25%
+    new_solutions = [create_solution() for _ in range(pop_size - len(top_parents) - len(offspring))]
 
-        
-        # Mutation
-        new_pop = top_parents + offspring + new_solutions
-        new_pop = [mutate(new_pop[i]) for i in range(pop_size)]
+    
+    # Mutation
+    new_pop = top_parents + offspring + new_solutions
+    new_pop = [mutate(new_pop[i]) for i in range(pop_size)]
 
-        return new_pop
+    return new_pop
 
+
+def getCruiseAirfoil(pop_size):
+    return_pop = []
+    target = pop_size//10
+    print("Regenerating {} solutions for Cruise condtions.".format(target))
+    i=0
+    while i < target:
+        s = create_cruise_solution()
+        if s.get_fitness(1) > 1:
+            return_pop.append(s)
+            i += 1
+            print(i)
+    while len(return_pop) < pop_size:
+        return_pop.append(create_cruise_solution())
+    return return_pop
 
 def sortByScore(tup):
     return tup[0]
