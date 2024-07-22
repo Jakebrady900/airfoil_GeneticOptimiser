@@ -42,7 +42,7 @@ class Airfoil:
         match solution_type:
             case 1:
                 # 1. Cruise Condition (CL set, minimise Drag)
-                if CL < Cruise_CL * 0.95 or CL > Cruise_CL * 1.05:
+                if CL < Cruise_CL * 0.98 or CL > Cruise_CL * 1.02:
                     return 1
                 return (CL / CD)
             case 2:
@@ -53,6 +53,18 @@ class Airfoil:
             case 3:
                 # 3. Max Climb (Maximise CL, within reason, below a ceiling.)
                 return CL
+    
+    def get_CL(self):
+        input_data = [[self.Velocity, self.AOA, self.Inaccuracy, self.d2Yl, self.y_TE, self.a_TE]]
+        CL = CL_Predictor.predict(input_data)[0]
+        return CL
+    
+    def get_CD(self):
+        input_data = [[self.Velocity, self.AOA, self.Inaccuracy, self.d2Yl, self.y_TE, self.a_TE]]
+        CL = CL_Predictor.predict(input_data)[0]
+        input_data_with_CL = [[self.Velocity, self.AOA, self.Inaccuracy, self.d2Yl, self.y_TE, self.a_TE, CL]]
+        CD = CD_Predictor.predict(input_data_with_CL)[0]
+        return CD
         
 
 def create_solution():
@@ -64,6 +76,7 @@ def create_solution():
     s.scale_self()
     return s
 
+
 def create_cruise_solution():
     s = Airfoil(Velocity=V, 
                  AOA=random.uniform(-2, 3), 
@@ -72,6 +85,7 @@ def create_cruise_solution():
                  a_TE=random.uniform(-10, 5))
     s.scale_self()
     return s
+
 
 def init_population(population_size, isCruise=False):
     if isCruise:
@@ -85,6 +99,7 @@ def crossover(p1, p2):
     
     child = [dna1[n] if random.randint(0, 1) == 0 else dna2[n] for n in range(len(dna1))]
     return Airfoil(Velocity=p1.Velocity, AOA=child[0], d2Yl=child[1], y_TE=child[2], a_TE=child[3])
+
 
 def mutate(s, mutation_chance=0.01):
     dna = [s.AOA, s.d2Yl, s.y_TE, s.a_TE]
@@ -103,7 +118,7 @@ def run_GA(num_generations, num_solutions_per_gen, Velocity, solution_type=1):
     global Status
     Status = False
     global Cruise_CL
-    Cruise_CL = (2*1633)/((V**2)* 0.95697 * 16.16 * 1.25) # Semantic value within the context of the problem.
+    Cruise_CL = ((2*16019.73)/((V**2)* 0.95697 * 16.16)) * 1.34 # Semantic value within the context of the problem.
 
     population = init_population(population_size=num_solutions_per_gen, isCruise=(solution_type==1))
     pop_size = num_solutions_per_gen
@@ -127,9 +142,11 @@ def run_GA(num_generations, num_solutions_per_gen, Velocity, solution_type=1):
 
 
     best_solution = scored_population[0][1]
-    best_solution = denormalize_data(best_solution)
     print("\n\n=== Best solution overall === ")
     print("Fitness: ", scored_population[0][0])
+    print("CL: ", best_solution.get_CL())
+    print("CD: ", best_solution.get_CD())
+    best_solution = denormalize_data(best_solution)
     printSolution(best_solution)
 
     end_time = time.time()  # Stop the timer
@@ -139,49 +156,25 @@ def run_GA(num_generations, num_solutions_per_gen, Velocity, solution_type=1):
     plot_airfoil(best_solution)
     Status = True
 
+
+def tournament_select(population, k=3):
+    selected = random.sample(population, k)
+    return max(selected, key=lambda x: x[0])
+
+
 def select_pool(scored_population, solution_type):
-    # ================ Pool Selection ================
-    # 1. retain the top 25% of the previous population
-    # 2. crossover (returning two offspring) for 50%
-    # 3. completely random new solutions for 25%
-    # ====================   End   ====================
-
     pop_size = len(scored_population)
-
-    if solution_type == 1 and scored_population[0][0] != 1:
-        # Find how many solutions are not equal to 1
-        count = 0
-        for i in range(pop_size):
-            if scored_population[i][0] > 1:
-                count += 1
-            else:
-                exit
-        if count < pop_size//2:
-            # add the solutions that are not equal to 1 to an array on repeat until the population is full
-            new_pop = [scored_population[i][1] for i in range(count)]
-
-            # new code to fill the rest of new_pop
-            while len(new_pop) < pop_size:
-                new_pop.extend(scored_population[i][1] for i in range(count))
-
-            # if new_pop is larger than pop_size, trim it down
-            if len(new_pop) > pop_size:
-                new_pop = new_pop[:pop_size]
-
-    # 1.retain the top 25% of the previous population
-    top_parents  = [s for _, s in scored_population[:pop_size//4]]
+    new_pop = []
     
-    # 2. crossover (returning two offspring) for 50%
-    offspring = [crossover(random.choice(top_parents), random.choice(top_parents)) for _ in range(pop_size//2)]
-
-    # 3. completely random new solutions for 25%
-    new_solutions = [create_solution() for _ in range(pop_size - len(top_parents) - len(offspring))]
-
+    # Elitism: Keep the best solution
+    new_pop.append(scored_population[0][1])
     
-    # Mutation
-    new_pop = top_parents + offspring + new_solutions
-    new_pop = [mutate(new_pop[i]) for i in range(pop_size)]
-
+    while len(new_pop) < pop_size:
+        parent1 = tournament_select(scored_population)[1]
+        parent2 = tournament_select(scored_population)[1]
+        child = crossover(parent1, parent2)
+        new_pop.append(mutate(child))
+    
     return new_pop
 
 
@@ -200,11 +193,14 @@ def getCruiseAirfoil(pop_size):
         return_pop.append(create_cruise_solution())
     return return_pop
 
+
 def sortByScore(tup):
     return tup[0]
 
+
 def printSolution(s):
     print("V={}, AOA={}, d2Yl={}, y_TE={}, a_TE={}".format(s.Velocity, s.AOA, s.d2Yl, s.y_TE, s.a_TE))
+
 
 def denormalize_data(s):
     df = pd.read_csv("PreProcessing.csv")
