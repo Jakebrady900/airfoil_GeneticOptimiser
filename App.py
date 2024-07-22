@@ -39,9 +39,9 @@ async def getStatus():
 
 
 def run_GA_in_background(solution_type, velocity):
-    if solution_type == 1: num_generations,num_solutions_per_gen = 15, 200
+    if solution_type == 1: num_generations,num_solutions_per_gen = 20, 30
     elif solution_type == 2: num_generations,num_solutions_per_gen = 15, 20
-    elif solution_type == 3: num_generations,num_solutions_per_gen = 15, 20
+    elif solution_type == 3: num_generations,num_solutions_per_gen = 20, 10
     else: raise HTTPException(status_code=400, detail="Invalid solution type")
 
     GA.run_GA(num_generations=num_generations, 
