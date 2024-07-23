@@ -42,8 +42,9 @@ class Airfoil:
         match solution_type:
             case 1:
                 # 1. Cruise Condition (CL set, minimise Drag)
-                if CL < Cruise_CL * 0.98 or CL > Cruise_CL * 1.02:
-                    return 1
+                cl_error = abs(CL - Cruise_CL) / Cruise_CL
+                if cl_error > 0.02:
+                    return 1 / (1 + cl_error)  # Penalize solutions outside the range, but provide a gradient
                 return (1 / CD)
             case 2:
                 # 2. Optimal Climb (Optimal E)
@@ -79,21 +80,6 @@ def create_solution():
 def init_population(population_size):
     return [create_solution() for _ in range(population_size)]
 
-
-def crossover(p1, p2):
-    dna1 = [p1.AOA, p1.d2Yl, p1.y_TE, p1.a_TE]
-    dna2 = [p2.AOA, p2.d2Yl, p2.y_TE, p2.a_TE]
-    
-    child = [dna1[n] if random.randint(0, 1) == 0 else dna2[n] for n in range(len(dna1))]
-    return Airfoil(Velocity=p1.Velocity, AOA=child[0], d2Yl=child[1], y_TE=child[2], a_TE=child[3])
-
-def mutate(s, mutation_chance=0.01):
-    dna = [s.AOA, s.d2Yl, s.y_TE, s.a_TE]
-
-    mutated_dna = [(random.uniform(-0.5, 0.5) + 1) * gene if random.random() <= mutation_chance else gene for gene in dna]
-    return Airfoil(Velocity=s.Velocity, AOA=dna[0], d2Yl=dna[1], y_TE=dna[2], a_TE=dna[3])
-
-
 def run_GA(num_generations, num_solutions_per_gen, Velocity, solution_type=1):
     global V
     V = Velocity
@@ -115,17 +101,11 @@ def run_GA(num_generations, num_solutions_per_gen, Velocity, solution_type=1):
 
         print("\n\n=== Gen {} === ".format(i))
         # Append the Fitness Tracker
-        avg_fitness = sum(score for score, _ in scored_population) / num_solutions_per_gen
-        avg_fitness = scored_population[0][0]
-        FitnessTracker.append((i+1, avg_fitness))
-        
-        if scored_population[0][0] == 1:
-            population = init_population(num_solutions_per_gen)
-            print("Regenerating population due to no sufficient solutions")
-            continue
+        top_fitness = scored_population[0][0]
+        FitnessTracker.append((i+1, top_fitness))
         
         # Reassign the population to the newly generated population
-        population = select_pool(scored_population=scored_population, solution_type=solution_type)
+        population = select_pool(scored_population=scored_population)
 
 
     best_solution = scored_population[0][1]
@@ -148,18 +128,49 @@ def tournament_select(population, k=3):
     selected = random.sample(population, k)
     return max(selected, key=lambda x: x[0])
 
+def crossover(p1, p2):
+    dna1 = [p1.AOA, p1.d2Yl, p1.y_TE, p1.a_TE]
+    dna2 = [p2.AOA, p2.d2Yl, p2.y_TE, p2.a_TE]
+    
+    child = [dna1[n] if random.randint(0, 1) == 0 else dna2[n] for n in range(len(dna1))]
+    return Airfoil(Velocity=p1.Velocity, AOA=child[0], d2Yl=child[1], y_TE=child[2], a_TE=child[3])
 
-def select_pool(scored_population, solution_type):
+def blx_alpha_crossover(p1, p2, alpha=0.5):
+    dna1 = [p1.AOA, p1.d2Yl, p1.y_TE, p1.a_TE]
+    dna2 = [p2.AOA, p2.d2Yl, p2.y_TE, p2.a_TE]
+    
+    child = []
+    for g1, g2 in zip(dna1, dna2):
+        min_val = min(g1, g2)
+        max_val = max(g1, g2)
+        range_val = max_val - min_val
+        child.append(random.uniform(min_val - alpha * range_val, max_val + alpha * range_val))
+    
+    return Airfoil(Velocity=p1.Velocity, AOA=child[0], d2Yl=child[1], y_TE=child[2], a_TE=child[3])
+
+def mutate(s, mutation_chance=0.2, mutation_range=0.25):
+    dna = [s.AOA, s.d2Yl, s.y_TE, s.a_TE]
+    mutated_dna = [
+        gene * (1 + random.gauss(0, mutation_range)) 
+        if random.random() <= mutation_chance else gene 
+        for gene in dna
+        ]
+    return Airfoil(Velocity=s.Velocity, AOA=mutated_dna[0], d2Yl=mutated_dna[1], y_TE=mutated_dna[2], a_TE=mutated_dna[3])
+
+def select_pool(scored_population):
     pop_size = len(scored_population)
     new_pop = []
     
     # Elitism: Keep the best solution
+    # keep 3 copies of it, mutate 2 of them.
     new_pop.append(scored_population[0][1])
+    new_pop.append(mutate(scored_population[0][1], mutation_chance=1, mutation_range=0.1))
+    new_pop.append(mutate(scored_population[0][1], mutation_chance=1, mutation_range=0.1))
     
     while len(new_pop) < pop_size:
         parent1 = tournament_select(scored_population)[1]
         parent2 = tournament_select(scored_population)[1]
-        child = crossover(parent1, parent2)
+        child = blx_alpha_crossover(parent1, parent2)
         new_pop.append(mutate(child))
     
     return new_pop
